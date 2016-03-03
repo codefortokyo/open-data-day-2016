@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<script src="/js/vendor/d3/d3.min.js"></script>
+<script src="/js/vendor/d3/topojson.min.js"></script>
+<script src="/js/vendor/d3/cartogram.js"></script>
+<script src="/js/vendor/handsontable/handsontable.full.js"></script>
+<link rel="stylesheet" media="screen" href="/js/vendor/handsontable/handsontable.full.css">
+<link rel="stylesheet" media="screen" href="/css/vendor/normalize.css">
+<link rel="stylesheet" media="screen" href="/css/style.css">
+<body>
+  <article class='clearfix'>
+    <section style='float:left;'><svg id='map'></svg></section>
+    <section style='float:left;'><div id='table' class='clearfix'></div></section>
+  </article>
+<script>
+var width = 640;
+var height = 640;
+
+var svg = d3.select('svg#map')
+  .attr('width', width)
+  .attr('height', height);
+
+var geoLayer = svg.append('g');
+var infoLayer = svg.append('g');
+infoLayer.append('rect').attr({stroke:'none',fill:'rgba(0,0,0,0.75)'});
+var infoText = infoLayer.append('g');
+infoLayer.current = null;
+
+var translate = [width/2, height/2];
+var scale = 150;
+var projection = d3.geo.mercator()
+  .scale(scale)
+  .translate(translate);
+
+var path = d3.geo.path().projection(projection);
+
+var carto = d3.cartogram()
+  .projection(projection)
+  .properties(function (d)
+	{
+    return d.properties;
+  })
+  .value(function(d)
+	{
+		return 10;
+	});
+
+var wardKey = '郡・政令都市名';
+var orderKey = '行政区域コード';
+
+d3.json("/data/geo/ku.topojson", function (error, data)
+{
+  if (error)
+  {
+    return;
+  }
+  var key = d3.keys(data.objects)[0];
+  var features = topojson.feature(data, data.objects[key]).features.sort(function(a,b){return (+a.properties[orderKey])<(+b.properties[orderKey])?-1:1});
+	var fc = { "type": "FeatureCollection","features":features};
+	var b = path.bounds(fc);
+	projection.center(projection.invert(path.centroid(fc)));
+	b = path.bounds(fc);
+  scale = Math.min(
+		((width/2*150)/(width/2-b[0][0])),
+		((height/2*150)/(height/2-b[0][1])),
+		((width/2*150)/(b[1][0]-width/2)),
+		((height/2*150)/(b[1][1]-height/2))
+	);
+	projection.scale(scale);
+  geoLayer.selectAll('path')
+    .data(features)
+    .enter().append('path')
+    .attr("fill", '#FFF')
+    .attr('stroke', '#888')
+    .attr('stroke-width', 1.2)
+    .attr('d', path);
+/*
+	setTimeout(function()
+	{
+		features = carto(data, data.objects[key].geometries).features.sort(function(a,b){return (+a.properties['行政区域コード'])<(+b.properties['行政区域コード'])?-1:1});
+		path = carto.path;
+		geoLayer.selectAll('path')
+			.data(features).transition().duration(10000)
+		  .attr('d', path);
+
+	}, 2000);
+*/
+  var attrs = {};
+  features.forEach(function(d)
+  {
+    attrs[d.properties[wardKey]] = {nickname: d.properties[wardKey], 'color': '#FFF', 'centroid': path.centroid(d)};
+  });
+  infoLayer.selectAll('text')
+    .data(d3.entries(attrs))
+    .enter().append('text')
+    .attr('class', 'nickname')
+    .attr('x', function(d){return d.value.centroid[0];})
+    .attr('y', function(d){return d.value.centroid[1];})
+    .attr('text-anchor', 'middle')
+    .text(function(d){return d.value.nickname;});
+  var hot = new Handsontable(d3.select('div#table').node(),
+  {
+    data: d3.entries(attrs),
+    colHeaders: ['区','ニックネーム','色'],
+    fixedColumnsLeft: 1,
+    columns: [{data:'key',readOnly:true},{data:'value.nickname'},{data:'value.color'}]
+  });
+  hot.addHook('afterChange', function(_,__)
+  {
+    hot.getData().forEach(function(d)
+    {
+      if (attrs[d[0]] !== void 0)
+      {
+        attrs[d[0]].nickname = d[1];
+        attrs[d[0]].color = d[2];
+      }
+    });
+    infoLayer.selectAll('text').text(function(d){return d.value.nickname;});
+    geoLayer.selectAll('path').attr('fill', function(d)
+    {
+      return attrs[d.properties[wardKey]].color;
+    });
+  });
+});
+</script>
