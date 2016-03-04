@@ -70,9 +70,9 @@ d3.json("/data/geo/ku.topojson", function (error, data)
     .attr('stroke-width', 1.2)
     .attr('d', path);
 
-  var colors = ['#F00','#0F0'];
+  var colors = ['#000','#FFF'];
   var areaScale = d3.scale.linear().range([0.0,100.0]);
-  var colorScale = d3.scale.linear().range(colors).interpolate(d3.interpolateRgb);
+  var colorScale = d3.scale.linear().range(colors).interpolate(d3.interpolateHsl);
 
   var attrs = {};
 
@@ -89,14 +89,13 @@ d3.json("/data/geo/ku.topojson", function (error, data)
 
   features.forEach(function(d)
   {
-    attrs[d.properties[wardKey]] = {nickname: d.properties[wardKey], 'color': '#FFF', 'centroid': path.centroid(d), 'area': d.properties['面積']};
+    attrs[d.properties[wardKey]] = {nickname: d.properties[wardKey], 'colorData': '#FFF', 'colorValue': 0, 'color': '#FFF', 'centroid': path.centroid(d), 'area': d.properties['面積']};
   });
   features = carto(data, data.objects[key].geometries).features.sort(function(a,b){return (+a.properties[orderKey])<(+b.properties[orderKey])?-1:1});
   path = carto.path;
   geoLayer.selectAll('path')
     .data(features).transition().duration(10000)
     .attr('d', path);
-
 
   infoLayer.selectAll('text')
     .data(d3.entries(attrs))
@@ -111,7 +110,7 @@ d3.json("/data/geo/ku.topojson", function (error, data)
     data: d3.entries(attrs),
     colHeaders: ['区','ニックネーム','色','面積'],
     fixedColumnsLeft: 1,
-    columns: [{data:'key',readOnly:true},{data:'value.nickname'},{data:'value.color'},{data:'value.area'}]
+    columns: [{data:'key',readOnly:true},{data:'value.nickname'},{data:'value.colorData'},{data:'value.area'}]
   });
   hot.addHook('afterChange', function(_,__)
   {
@@ -120,11 +119,16 @@ d3.json("/data/geo/ku.topojson", function (error, data)
       if (attrs[d[0]] !== void 0)
       {
         attrs[d[0]].nickname = d[1];
-        attrs[d[0]].color = cast(d[2]);
+        attrs[d[0]].colorData = d[2];
+        attrs[d[0]].colorValue = cast(d[2]);
         attrs[d[0]].area = cast(d[3]);
       }
     });
-    colorScale.domain(d3.extent(d3.values(attrs), function(d){return +d.color;}));
+    colorScale.domain(d3.extent(d3.values(attrs), function(d){return +d.colorValue;}));
+    d3.values(attrs).forEach(function(d)
+    {
+      d.color = isNaN(d.colorValue)?d.colorValue:colorScale(d.colorValue);
+    });
     areaScale.domain([0, d3.max(d3.values(attrs), function(d){return d.area;})]);
     features = carto(data, data.objects[key].geometries).features.sort(function(a,b){return (+a.properties[orderKey])<(+b.properties[orderKey])?-1:1});
     features.forEach(function(d)
@@ -137,7 +141,7 @@ d3.json("/data/geo/ku.topojson", function (error, data)
       .attr('y', function(d){return d.value.centroid[1];});
     geoLayer.selectAll('path').data(features).transition().duration(1000).attr('fill', function(d)
     {
-      return isNaN(attrs[d.properties[wardKey]].color)?attrs[d.properties[wardKey]].color:colorScale(attrs[d.properties[wardKey]].color);
+      return attrs[d.properties[wardKey]].color;
     }).attr('d', path);
   });
 });
