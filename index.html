@@ -34,17 +34,6 @@ var projection = d3.geo.mercator()
 
 var path = d3.geo.path().projection(projection);
 
-var carto = d3.cartogram()
-  .projection(projection)
-  .properties(function (d)
-	{
-    return d.properties;
-  })
-  .value(function(d)
-	{
-		return 10;
-	});
-
 var wardKey = '郡・政令都市名';
 var orderKey = '行政区域コード';
 
@@ -74,22 +63,34 @@ d3.json("/data/geo/ku.topojson", function (error, data)
     .attr('stroke', '#888')
     .attr('stroke-width', 1.2)
     .attr('d', path);
-/*
-	setTimeout(function()
-	{
-		features = carto(data, data.objects[key].geometries).features.sort(function(a,b){return (+a.properties['行政区域コード'])<(+b.properties['行政区域コード'])?-1:1});
-		path = carto.path;
-		geoLayer.selectAll('path')
-			.data(features).transition().duration(10000)
-		  .attr('d', path);
 
-	}, 2000);
-*/
+  var areaScale = d3.scale.linear().range([0.0,100.0]);
+  var colorScale = d3.scale.linear().range([0.0, 1.0]);
+
   var attrs = {};
+
+  var carto = d3.cartogram()
+    .projection(projection)
+    .properties(function (d)
+  	{
+      return d.properties;
+    })
+    .value(function(d)
+  	{
+  		return areaScale(attrs[d.properties[wardKey]].area);
+  	});
+
   features.forEach(function(d)
   {
-    attrs[d.properties[wardKey]] = {nickname: d.properties[wardKey], 'color': '#FFF', 'centroid': path.centroid(d)};
+    attrs[d.properties[wardKey]] = {nickname: d.properties[wardKey], 'color': '#FFF', 'centroid': path.centroid(d), 'area': d.properties['面積']};
   });
+  features = carto(data, data.objects[key].geometries).features.sort(function(a,b){return (+a.properties[orderKey])<(+b.properties[orderKey])?-1:1});
+  path = carto.path;
+  geoLayer.selectAll('path')
+    .data(features).transition().duration(10000)
+    .attr('d', path);
+
+
   infoLayer.selectAll('text')
     .data(d3.entries(attrs))
     .enter().append('text')
@@ -101,9 +102,9 @@ d3.json("/data/geo/ku.topojson", function (error, data)
   var hot = new Handsontable(d3.select('div#table').node(),
   {
     data: d3.entries(attrs),
-    colHeaders: ['区','ニックネーム','色'],
+    colHeaders: ['区','ニックネーム','色','面積'],
     fixedColumnsLeft: 1,
-    columns: [{data:'key',readOnly:true},{data:'value.nickname'},{data:'value.color'}]
+    columns: [{data:'key',readOnly:true},{data:'value.nickname'},{data:'value.color'},{data:'value.area'}]
   });
   hot.addHook('afterChange', function(_,__)
   {
@@ -113,13 +114,23 @@ d3.json("/data/geo/ku.topojson", function (error, data)
       {
         attrs[d[0]].nickname = d[1];
         attrs[d[0]].color = d[2];
+        attrs[d[0]].area = +d[3];
       }
     });
-    infoLayer.selectAll('text').text(function(d){return d.value.nickname;});
-    geoLayer.selectAll('path').attr('fill', function(d)
+    areaScale.domain([0, d3.max(d3.values(attrs), function(d){return d.area;})]);
+    features = carto(data, data.objects[key].geometries).features.sort(function(a,b){return (+a.properties[orderKey])<(+b.properties[orderKey])?-1:1});
+    features.forEach(function(d)
+    {
+      attrs[d.properties[wardKey]].centroid = path.centroid(d);
+    });
+
+    infoLayer.selectAll('text').text(function(d){return d.value.nickname;}).transition().duration(1000)
+      .attr('x', function(d){return d.value.centroid[0];})
+      .attr('y', function(d){return d.value.centroid[1];});
+    geoLayer.selectAll('path').data(features).transition().duration(1000).attr('fill', function(d)
     {
       return attrs[d.properties[wardKey]].color;
-    });
+    }).attr('d', path);
   });
 });
 </script>
