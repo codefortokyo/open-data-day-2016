@@ -14,8 +14,11 @@
     <section style='float:left;'><svg id='map'></svg></section>
     <section style='float:left;'>
       <div id='table' class='clearfix'></div>
-      <input id='c0' class='jscolor' value='FCC' />
-      <input id='c1' class='jscolor' value='CCF' />
+      <div id='style' class='clearfix'>
+        <ul style='list-style:none;'>
+          <li style='float:left;'><input id='c0' class='cp'></input></li>
+          <li style='float:left;'><input id='c1' class='cp'></input></li>
+      </div>
     </section>
   </article>
 <script>
@@ -50,20 +53,32 @@ var cast = function(d)
 }
 var dispatcher = d3.dispatch('dataChanged', 'uiChanged');
 
-var colors = ['#' + d3.select('#c0').property('value'), '#'+d3.select('#c1').property('value')];
+var colors = [0,0];
+
+!(function(_c0,_c1)
+{
+  var c0 = new jscolor(d3.select('#c0').node());
+  c0.fromString(_c0);
+  colors[0] = '#'+_c0;
+  var c1 = new jscolor(d3.select('#c1').node());
+  c1.fromString(_c1);
+  colors[1] = '#'+_c1;
+  dispatcher.uiChanged();
+}('6CF','F6C'));
+
 d3.select('#c0').on('change', function()
 {
-  colors[0] = '#'+d3.select(this).property('value');
+  colors[0] = '#'+this.value;
   dispatcher.uiChanged();
 });
 d3.select('#c1').on('change', function()
 {
-  colors[1] = '#'+d3.select(this).property('value');
+  colors[1] = '#'+this.value;
   dispatcher.uiChanged();
 });
 
 var areaScale = d3.scale.linear().range([0.0,100.0]);
-var colorScale = d3.scale.linear().range(colors).interpolate(d3.interpolateHsl);
+var colorScale = d3.scale.linear().range(colors);
 
 
 d3.json("/data/geo/ku.topojson", function (error, data)
@@ -123,6 +138,8 @@ d3.json("/data/geo/ku.topojson", function (error, data)
     .attr('x', function(d){return d.value.centroid[0];})
     .attr('y', function(d){return d.value.centroid[1];})
     .attr('text-anchor', 'middle')
+    .style('text-shadow', '1px 1px 0 #FFF, -1px -1px 0 #FFF, 1px -1px 0 #FFF, -1px 1px 0 #FFF')
+    .attr('fill', '#000')
     .text(function(d){return d.value.nickname;});
   var hot = new Handsontable(d3.select('div#table').node(),
   {

@@ -1,5 +1,5 @@
 body {
-  padding: 50px;
+  padding: 10px;
   font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
 }
 
@@ -15,4 +15,11 @@ a {
   font-size:0;
   clear: both;
   visibility:hidden;
+}
+
+.cp
+{
+  border: solid 2px #FFF;
+  width: 60px;
+  height:20px;
 }
