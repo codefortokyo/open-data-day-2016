@@ -3,6 +3,8 @@
 <script src="/javascripts/vendor/d3/d3.min.js"></script>
 <script src="/javascripts/vendor/d3/topojson.min.js"></script>
 <script src="/javascripts/vendor/d3/cartogram.js"></script>
+<script src="/javascripts/vendor/jscolor/jscolor.min.js"></script>
+
 <script src="/javascripts/vendor/handsontable/handsontable.full.js"></script>
 <link rel="stylesheet" media="screen" href="/javascripts/vendor/handsontable/handsontable.full.css">
 <link rel="stylesheet" media="screen" href="/stylesheets/vendor/normalize.css">
@@ -10,7 +12,11 @@
 <body>
   <article class='clearfix'>
     <section style='float:left;'><svg id='map'></svg></section>
-    <section style='float:left;'><div id='table' class='clearfix'></div></section>
+    <section style='float:left;'>
+      <div id='table' class='clearfix'></div>
+      <input id='c0' class='jscolor' value='FCC' />
+      <input id='c1' class='jscolor' value='CCF' />
+    </section>
   </article>
 <script>
 var width = 640;
@@ -42,6 +48,23 @@ var cast = function(d)
   var n = (''+d).replace(/[,\n\t 　、，\s"']/g,'').replace(/[－０-９]/g, function(s){return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);});
   return isNaN(n)?d:+n;
 }
+var dispatcher = d3.dispatch('dataChanged', 'uiChanged');
+
+var colors = ['#' + d3.select('#c0').property('value'), '#'+d3.select('#c1').property('value')];
+d3.select('#c0').on('change', function()
+{
+  colors[0] = '#'+d3.select(this).property('value');
+  dispatcher.uiChanged();
+});
+d3.select('#c1').on('change', function()
+{
+  colors[1] = '#'+d3.select(this).property('value');
+  dispatcher.uiChanged();
+});
+
+var areaScale = d3.scale.linear().range([0.0,100.0]);
+var colorScale = d3.scale.linear().range(colors).interpolate(d3.interpolateHsl);
+
 
 d3.json("/data/geo/ku.topojson", function (error, data)
 {
@@ -69,10 +92,6 @@ d3.json("/data/geo/ku.topojson", function (error, data)
     .attr('stroke', '#888')
     .attr('stroke-width', 1.2)
     .attr('d', path);
-
-  var colors = ['#000','#FFF'];
-  var areaScale = d3.scale.linear().range([0.0,100.0]);
-  var colorScale = d3.scale.linear().range(colors).interpolate(d3.interpolateHsl);
 
   var attrs = {};
 
@@ -112,18 +131,8 @@ d3.json("/data/geo/ku.topojson", function (error, data)
     fixedColumnsLeft: 1,
     columns: [{data:'key',readOnly:true},{data:'value.nickname'},{data:'value.colorData'},{data:'value.area'}]
   });
-  hot.addHook('afterChange', function(_,__)
+  redraw = function()
   {
-    hot.getData().forEach(function(d)
-    {
-      if (attrs[d[0]] !== void 0)
-      {
-        attrs[d[0]].nickname = d[1];
-        attrs[d[0]].colorData = d[2];
-        attrs[d[0]].colorValue = cast(d[2]);
-        attrs[d[0]].area = cast(d[3]);
-      }
-    });
     colorScale.domain(d3.extent(d3.values(attrs), function(d){return +d.colorValue;}));
     d3.values(attrs).forEach(function(d)
     {
@@ -143,6 +152,22 @@ d3.json("/data/geo/ku.topojson", function (error, data)
     {
       return attrs[d.properties[wardKey]].color;
     }).attr('d', path);
+  }
+  hot.addHook('afterChange', function(_,__)
+  {
+    hot.getData().forEach(function(d)
+    {
+      if (attrs[d[0]] !== void 0)
+      {
+        attrs[d[0]].nickname = d[1];
+        attrs[d[0]].colorData = d[2];
+        attrs[d[0]].colorValue = cast(d[2]);
+        attrs[d[0]].area = cast(d[3]);
+      }
+    });
+    dispatcher.dataChanged();
   });
+  dispatcher.on('dataChanged', redraw);
+  dispatcher.on('uiChanged', redraw);
 });
 </script>
