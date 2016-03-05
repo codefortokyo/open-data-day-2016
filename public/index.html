@@ -126,12 +126,13 @@ d3.json("/data/geo/ku.topojson", function (error, data)
     })
     .value(function(d)
   	{
-  		return areaScale(attrs[d.properties[wardKey]].area);
+  		return isNaN(attrs[d.properties[wardKey]].area)?attrs[d.properties[wardKey]].original_area:areaScale(attrs[d.properties[wardKey]].area);
   	});
 
+  areaScale.domain([0, d3.max(features, function(d){return +d.properties['面積'];})]);
   features.forEach(function(d)
   {
-    attrs[d.properties[wardKey]] = {nickname: d.properties[wardKey], 'colorData': '#FFF', 'colorValue': 0, 'color': '#FFF', 'centroid': path.centroid(d), 'bb': path.bounds(d), 'area': d.properties['面積']};
+    attrs[d.properties[wardKey]] = {nickname: d.properties[wardKey], 'colorData': '#FFF', 'colorValue': 0, 'color': '#FFF', 'centroid': path.centroid(d), 'bb': path.bounds(d), 'area': +d.properties['面積'], 'original_area': areaScale(+d.properties['面積'])};
   });
   features = carto(data, data.objects[key].geometries).features.sort(function(a,b){return (+a.properties[orderKey])<(+b.properties[orderKey])?-1:1});
   path = carto.path;
@@ -184,6 +185,10 @@ d3.json("/data/geo/ku.topojson", function (error, data)
   }
   hot.addHook('afterChange', function(_,__)
   {
+    if (hot.countRows() > features.length)
+    {
+      hot.alter('remove_row', features.length, hot.countRows()-features.length);
+    }
     hot.getData().forEach(function(d)
     {
       if (attrs[d[0]] !== void 0)
