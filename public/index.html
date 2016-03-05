@@ -5,6 +5,7 @@
 <script src="/javascripts/vendor/d3/cartogram.js"></script>
 <script src="/javascripts/vendor/jscolor/jscolor.min.js"></script>
 <script src="/javascripts/vendor/handsontable/handsontable.full.js"></script>
+<script src="/javascripts/svg2canvas.js"></script>
 <script src="/javascripts/app.js"></script>
 <link rel="stylesheet" media="screen" href="/javascripts/vendor/handsontable/handsontable.full.css">
 <link rel="stylesheet" media="screen" href="/stylesheets/vendor/normalize.css">
@@ -194,4 +195,7 @@ d3.json("/data/geo/ku.topojson", function (error, data)
   dispatcher.on('dataChanged', redraw);
   dispatcher.on('uiChanged', redraw);
 });
+
+
+
 </script>
