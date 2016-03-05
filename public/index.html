@@ -4,11 +4,13 @@
 <script src="/javascripts/vendor/d3/topojson.min.js"></script>
 <script src="/javascripts/vendor/d3/cartogram.js"></script>
 <script src="/javascripts/vendor/jscolor/jscolor.min.js"></script>
-
 <script src="/javascripts/vendor/handsontable/handsontable.full.js"></script>
+<script src="/javascripts/svg2canvas.js"></script>
+<script src="/javascripts/app.js"></script>
 <link rel="stylesheet" media="screen" href="/javascripts/vendor/handsontable/handsontable.full.css">
 <link rel="stylesheet" media="screen" href="/stylesheets/vendor/normalize.css">
 <link rel="stylesheet" media="screen" href="/stylesheets/style.css">
+<link rel="stylesheet" media="screen" href="/stylesheets/vendor/font-awesome/css/font-awesome.min.css">
 <body>
   <article class='clearfix'>
     <section style='float:left;'><svg id='map'></svg></section>
@@ -18,6 +20,12 @@
         <ul style='list-style:none;'>
           <li style='float:left;'><input id='c0' class='cp'></input></li>
           <li style='float:left;'><input id='c1' class='cp'></input></li>
+        </ul>
+      </div>
+      <div id='buttons' class='clearfix'>
+        <ul style='list-style:none;'>
+          <li style='float:left;'><a href='#'><i id='btn-download' class="fa fa-download fa-3x"></i></a></li>
+        </ul>
       </div>
     </section>
   </article>
@@ -187,4 +195,21 @@ d3.json("/data/geo/ku.topojson", function (error, data)
   dispatcher.on('dataChanged', redraw);
   dispatcher.on('uiChanged', redraw);
 });
+
+d3.select('#btn-download')
+.on('click', function()
+{
+  d3.event.preventDefault();
+  svg2canvas(svg.node(), d3.select('body').node(), function(err,canvas)
+  {
+    var tag = d3.select('body').append('a')
+      .attr('type','application/octet-stream')
+      .attr('href', canvas.toDataURL('image/png'))
+      .attr('download','map.png');
+    tag.node().click();
+    tag.remove();
+    canvas.remove();
+  });
+});
+
 </script>
