@@ -24,7 +24,7 @@
       </div>
       <div id='buttons' class='clearfix'>
         <ul style='list-style:none;'>
-          <li style='float:left;'><i id='btn-download' class="fa fa-download fa-3x"></i></li>
+          <li style='float:left;'><a href='#'><i id='btn-download' class="fa fa-download fa-3x"></i></a></li>
         </ul>
       </div>
     </section>
@@ -196,6 +196,20 @@ d3.json("/data/geo/ku.topojson", function (error, data)
   dispatcher.on('uiChanged', redraw);
 });
 
-
+d3.select('#btn-download')
+.on('click', function()
+{
+  d3.event.preventDefault();
+  svg2canvas(svg.node(), d3.select('body').node(), function(err,canvas)
+  {
+    var tag = d3.select('body').append('a')
+      .attr('type','application/octet-stream')
+      .attr('href', canvas.toDataURL('image/png'))
+      .attr('download','map.png');
+    tag.node().click();
+    tag.remove();
+    canvas.remove();
+  });
+});
 
 </script>
