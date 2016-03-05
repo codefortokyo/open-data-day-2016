@@ -18,8 +18,8 @@
       <div id='table' class='clearfix'></div>
       <div id='style' class='clearfix'>
         <ul style='list-style:none;'>
-          <li style='float:left;'><input id='c0' class='cp'></input></li>
-          <li style='float:left;'><input id='c1' class='cp'></input></li>
+          <li style='float:left;'>最小: <input id='c0' class='cp'></input></li>
+          <li style='margin-left:4px;float:left;'>最大: <input id='c1' class='cp'></input></li>
         </ul>
       </div>
       <div id='buttons' class='clearfix'>
@@ -131,7 +131,7 @@ d3.json("/data/geo/ku.topojson", function (error, data)
 
   features.forEach(function(d)
   {
-    attrs[d.properties[wardKey]] = {nickname: d.properties[wardKey], 'colorData': '#FFF', 'colorValue': 0, 'color': '#FFF', 'centroid': path.centroid(d), 'area': d.properties['面積']};
+    attrs[d.properties[wardKey]] = {nickname: d.properties[wardKey], 'colorData': '#FFF', 'colorValue': 0, 'color': '#FFF', 'centroid': path.centroid(d), 'bb': path.bounds(d), 'area': d.properties['面積']};
   });
   features = carto(data, data.objects[key].geometries).features.sort(function(a,b){return (+a.properties[orderKey])<(+b.properties[orderKey])?-1:1});
   path = carto.path;
@@ -156,7 +156,7 @@ d3.json("/data/geo/ku.topojson", function (error, data)
     fixedColumnsLeft: 1,
     columns: [{data:'key',readOnly:true},{data:'value.nickname'},{data:'value.colorData'},{data:'value.area'}]
   });
-  redraw = function()
+  var recalc = function()
   {
     colorScale.domain(d3.extent(d3.values(attrs), function(d){return +d.colorValue;}));
     d3.values(attrs).forEach(function(d)
@@ -167,9 +167,13 @@ d3.json("/data/geo/ku.topojson", function (error, data)
     features = carto(data, data.objects[key].geometries).features.sort(function(a,b){return (+a.properties[orderKey])<(+b.properties[orderKey])?-1:1});
     features.forEach(function(d)
     {
+      attrs[d.properties[wardKey]].bounds = path.bounds(d);
       attrs[d.properties[wardKey]].centroid = path.centroid(d);
     });
-
+    redraw();
+  }
+  var redraw = function()
+  {
     infoLayer.selectAll('text').text(function(d){return d.value.nickname;}).transition().duration(1000)
       .attr('x', function(d){return d.value.centroid[0];})
       .attr('y', function(d){return d.value.centroid[1];});
@@ -192,8 +196,8 @@ d3.json("/data/geo/ku.topojson", function (error, data)
     });
     dispatcher.dataChanged();
   });
-  dispatcher.on('dataChanged', redraw);
-  dispatcher.on('uiChanged', redraw);
+  dispatcher.on('dataChanged', recalc);
+  dispatcher.on('uiChanged', recalc);
 });
 
 d3.select('#btn-download')
